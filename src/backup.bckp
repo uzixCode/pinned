@@ -1,0 +1,213 @@
+
+
+import path = require('path');
+import * as vscode from 'vscode';
+import { readFile, writeFile } from 'fs/promises';
+let pattern: RegExp = /(?:PINNED:)/;
+let pattern2: RegExp = /^\/\//;
+let commentPattern: RegExp = /^\/\//;
+let pinPattern: RegExp = /^(PINNED:)/;
+export function activate(context: vscode.ExtensionContext) {
+	checkFiles();
+	checkFilesActivity();
+
+	let windowListener = vscode.workspace.onDidChangeTextDocument(changeState => {
+		checkFiles();
+	});
+	let refreshPinnedList = vscode.commands.registerCommand('pinned.refreshList', () => {
+		checkFilesActivity();
+	});
+	let deletePinnedInline = vscode.commands.registerCommand('pinned.deleteInline', async (item: TreeItem) => {
+		const edit = new vscode.WorkspaceEdit();
+		let file = await vscode.workspace.openTextDocument(item.filePath);
+		edit.delete(item.filePath, new vscode.Range(new vscode.Position(item.line, 0), file.lineAt(item.line).range.end));
+		let success = await vscode.workspace.applyEdit(edit);
+	});
+	let deletePinnedPage = vscode.commands.registerCommand('pinned.deletePage', async () => {
+		const edit = new vscode.WorkspaceEdit();
+		const { activeTextEditor } = vscode.window;
+		if (!activeTextEditor) { return; }
+		const lines = activeTextEditor.document.getText().split('\n');
+		for (let i = 1; i < lines.length; i++) {
+			if (pattern.test(lines[i].trimStart()) && pattern2.test(lines[i].trimStart())) {
+				edit.delete(activeTextEditor.document.uri, new vscode.Range(new vscode.Position(i, 0), activeTextEditor.document.lineAt(i).range.end));
+			}
+		}
+		let success = await vscode.workspace.applyEdit(edit);
+		checkFiles();
+	});
+	let refreshPinnedPage = vscode.commands.registerCommand('pinned.refreshPage', () => {
+		checkFiles();
+		createDb();
+	});
+	let inline = vscode.commands.registerTextEditorCommand('pinned.inline', (editor, edit) => {
+		edit.insert(editor.selection.active, "//PINNED:");
+	});
+	let editorListener = vscode.window.onDidChangeActiveTextEditor(editor => {
+		checkFiles();
+	});
+	let openSelected = vscode.commands.registerCommand('pinned.openSelected', async (uri: string, line: number) => {
+		vscode.workspace.openTextDocument(vscode.Uri.file(uri)).then((a: vscode.TextDocument) => {
+			vscode.window.showTextDocument(a, 1, false).then(e => {
+				let range = e.document.lineAt(line - 1).range;
+				e.selection = new vscode.Selection(range.start, range.end);
+				e.revealRange(range);
+				// let editor = vscode.window.activeTextEditor;
+				// if (!editor) { return; }
+				// let range = editor.document.lineAt(line - 1).range;
+				// editor.selection = new vscode.Selection(range.start, range.end);
+				// editor.revealRange(range);
+			});
+		}, (error: any) => {
+			console.error(error);
+			debugger;
+		});
+		//  vscode.workspace.openTextDocument(vscode.Uri.file(uri));
+
+	});
+	context.subscriptions.push(refreshPinnedList);
+	context.subscriptions.push(refreshPinnedPage);
+	context.subscriptions.push(openSelected);
+	context.subscriptions.push(windowListener);
+	context.subscriptions.push(editorListener);
+	context.subscriptions.push(inline);
+	context.subscriptions.push(deletePinnedInline);
+	context.subscriptions.push(deletePinnedPage);
+}
+
+
+export function deactivate() {
+
+}
+async function createDb() {
+	const pathFile = path.join(__filename, '..', '..', 'assets', 'json', 'data.json');
+	let rawdata = await readFile(pathFile);
+	let data = await JSON.parse(rawdata.toString());
+	data["data"] = [{ "id": "asdsd", "path": "asdkasdads" }, { "id": "asdsd", "path": "asdkasdads" }, { "id": "asdsd", "path": "asdkasdads" }, { "id": "asdsd", "path": "asdkasdads" },];
+	let coockedData = JSON.stringify(data);
+	console.log(coockedData);
+	let writeData = await writeFile(pathFile, coockedData);
+}
+async function checkFilesActivity() {
+
+	const files = await vscode.workspace.findFiles('**/*.dart');
+	await Promise.all(files);
+	let dataJson = await JSON.parse('{"data":{}}');
+	for (let u = 0; u < files.length; u++) {
+		const file = await vscode.workspace.openTextDocument(files[u]);
+		console.log(path.basename(file.fileName));
+		const lines = file.getText().split('\n');
+
+		for (let i = 0; i < lines.length; i++) {
+			if (pattern.test(lines[i].trimStart()) && pattern2.test(lines[i].trimStart())) {
+				console.log(lines[i] + i);
+				let c = lines[i].trimStart().replace(commentPattern, "").trimStart();
+				let p = c.trimStart().replace(pinPattern, "").trimStart();
+				if (dataJson["data"][file.uri.path] === undefined) {
+					dataJson["data"][file.uri.path] = { "path": file.uri.path, "child": [{ "label": p, "path": file.uri.path, "line": i }] };
+				} else {
+					dataJson["data"][file.uri.path]["child"].push({ "label": p, "path": file.uri.path, "line": i });
+				}
+
+			}
+		}
+
+	}
+	let coockedData = JSON.stringify(dataJson);
+	const pathFile = path.join(__filename, '..', '..', 'assets', 'json', 'data.json');
+	let writeData = await writeFile(pathFile, coockedData);
+
+}
+async function addtoTree() {
+	const pathFile = path.join(__filename, '..', '..', 'assets', 'json', 'data.json');
+	let rawdata = await readFile(pathFile);
+	let dataJson = await JSON.parse(rawdata.toString());
+	const dataParent: TreeItemCollapseAble[] = [];
+	dataJson["data"].array.forEach(element => {
+		const data: TreeItem[] = [];
+		element["child"].array.forEach(ilimint => {
+			data.push(new TreeItem(ilimint["label"], [ilimint["path"], ilimint["line"]], ilimint["path"], ilimint["line"],));
+		});
+		if (data.length > 0) {
+			dataParent.push(new TreeItemCollapseAble(path.basename(file.fileName), data));
+		}
+		vscode.window.registerTreeDataProvider('pinned-list', new TreeDataProviderCollapable(dataParent));
+	});
+}
+function checkFiles() {
+	const data: TreeItem[] = [];
+	const { activeTextEditor } = vscode.window;
+	if (!activeTextEditor) { return; }
+	const lines = activeTextEditor.document.getText().split('\n');
+	for (let i = 0; i < lines.length; i++) {
+		if (pattern.test(lines[i].trimStart()) && pattern2.test(lines[i].trimStart())) {
+			console.log(lines[i] + i);
+			let c = lines[i].trimStart().replace(commentPattern, "").trimStart();
+			let p = c.trimStart().replace(pinPattern, "").trimStart();
+			data.push(new TreeItem(p, [activeTextEditor.document.uri.path, i + 1], activeTextEditor.document.uri, (i)));
+		}
+	}
+	const tree = vscode.window.createTreeView("pinned-page", { treeDataProvider: new TreeDataProvider(data), });
+	// vscode.window.registerTreeDataProvider('pinned-page', new TreeDataProvider(data));
+}
+class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
+	onDidChangeTreeData?: vscode.Event<TreeItem | null | undefined> | undefined;
+	data: TreeItem[];
+	constructor(data: TreeItem[]) {
+		this.data = data;
+	}
+
+	getTreeItem(element: TreeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
+		return element;
+	}
+
+	getChildren(element?: TreeItem | undefined): vscode.ProviderResult<TreeItem[]> {
+		if (element === undefined) {
+			return this.data;
+		}
+		return element.children;
+	}
+}
+class TreeItem extends vscode.TreeItem {
+	children: TreeItem[] | undefined;
+
+	constructor(label: string, uri: any[], public filePath: vscode.Uri, public line: number, public readonly contextValue = "pinned-item", public readonly iconPath = {
+		light: path.join(__filename, '..', '..', 'assets', 'icon_pin.svg'),
+		dark: path.join(__filename, '..', '..', 'assets', 'icon_pin.svg'),
+	}, public readonly command = { title: label, command: 'pinned.openSelected', arguments: uri }
+	) {
+		super(
+			label);
+	}
+
+}
+class TreeDataProviderCollapable implements vscode.TreeDataProvider<TreeItemCollapseAble> {
+	onDidChangeTreeData?: vscode.Event<TreeItemCollapseAble | null | undefined> | undefined;
+
+	data: TreeItemCollapseAble[];
+
+	constructor(data: TreeItemCollapseAble[]) {
+		this.data = data;
+	}
+
+	getTreeItem(element: TreeItemCollapseAble): vscode.TreeItem | Thenable<vscode.TreeItem> {
+		return element;
+	}
+
+	getChildren(element?: TreeItemCollapseAble | undefined): vscode.ProviderResult<TreeItemCollapseAble[]> {
+		if (element === undefined) {
+			return this.data;
+		}
+		return element.children;
+	}
+}
+class TreeItemCollapseAble extends vscode.TreeItem {
+	children: TreeItem[] | undefined;
+	constructor(label: string, children?: TreeItem[]) {
+		super(
+			label,
+			children === undefined ? vscode.TreeItemCollapsibleState.None :
+				vscode.TreeItemCollapsibleState.Expanded);
+		this.children = children;
+	}
+}

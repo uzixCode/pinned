@@ -1,0 +1,196 @@
+{
+  "name": "pinned",
+  "displayName": "Pinned",
+  "description": "extension to make life esaier",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.71.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:pinned.refreshList",
+    "onCommand:pinned.refreshPage",
+    "onCommand:pinned.openSelected",
+    "onCommand:pinned.inline",
+    "onView:pinned-page",
+    "onView:pinned-list",
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "menus": {
+      "view/title": [
+        {
+          "when": "view == pinned-list",
+          "command": "pinned.refreshList",
+          "alt": "pinned.refreshList",
+          "group": "navigation"
+        },
+        {
+          "when": "view == pinned-list",
+          "command": "pinned.filterAllPage",
+          "alt": "pinned.filterAllPage",
+          "group": "navigation"
+        },
+        {
+          "when": "view == pinned-page",
+          "command": "pinned.refreshPage",
+          "alt": "pinned.refreshPage",
+          "group": "navigation"
+        },
+        {
+          "when": "view == pinned-page",
+          "command": "pinned.deletePage",
+          "alt": "pinned.deletePage",
+          "group": "navigation"
+        },
+        {
+          "when": "view == pinned-page",
+          "command": "pinned.filterPage",
+          "alt": "pinned.filterPage",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "when": "viewItem == pinned-item && view == pinned-page",
+          "command": "pinned.deleteInline",
+          "alt": "pinned.deleteInline",
+          "group": "inline"
+        },
+        {
+          "when": "viewItem == pinned-item && view == pinned-list",
+          "command": "pinned.deleteInlineList",
+          "alt": "pinned.deleteInlineList",
+          "group": "inline"
+        },
+         {
+          "when": "viewItem == pinned-parent && view == pinned-list",
+          "command": "pinned.deleteParentList",
+          "alt": "pinned.deleteParentList",
+          "group": "inline"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pinned",
+          "title": "Pinned",
+          "icon": "assets/icon_pin.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "page",
+          "title": "Pinned Page",
+          "icon": "assets/icon_pin.svg"
+        }
+      ]
+    },
+    "views": {
+      "pinned": [
+        {
+          "id": "pinned-list",
+          "name": "Pinned List"
+        }
+      ],
+      "page": [
+        {
+          "id": "pinned-page",
+          "name": "Pinned Page"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "pinned.refreshList",
+        "title": "Refresh Pinned List",
+        "icon": "assets/icon_refresh.png"
+      },
+      {
+        "command": "pinned.refreshPage",
+        "title": "Refresh Pinned Page",
+        "icon": "assets/icon_refresh.png"
+      },
+      {
+        "command": "pinned.openSelected",
+        "title": "openSelected Pinned"
+      },
+      {
+        "command": "pinned.inline",
+        "title": "pin inline"
+      },
+      {
+        "command": "pinned.multipleInline",
+        "title": "pin multiple inline"
+      },
+      {
+        "command": "pinned.deleteInline",
+        "title": "delete pin inline",
+        "icon": "assets/remove.png"
+      },
+      {
+        "command": "pinned.deleteInlineList",
+        "title": "delete pin inline List",
+        "icon": "assets/remove.png"
+      },
+      {
+        "command": "pinned.deleteParentList",
+        "title": "delete pin parent List",
+        "icon": "assets/remove.png"
+      },
+      {
+        "command": "pinned.deletePage",
+        "title": "delete all pin in page",
+        "icon": "assets/remove.png"
+      },
+      {
+        "command": "pinned.filterPage",
+        "title": "filter page",
+        "icon": "assets/filter.png"
+      }, {
+        "command": "pinned.filterAllPage",
+        "title": "filter All page",
+        "icon": "assets/filter.png"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "pinned.inline",
+        "key": "ctrl+p ctrl+s",
+        "mac": "cmd+p cmd+s",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "pinned.multipleInline",
+        "key": "ctrl+p ctrl+m",
+        "mac": "cmd+p cmd+m",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.71.0",
+    "@types/glob": "^7.2.0",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.31.0",
+    "@typescript-eslint/parser": "^5.31.0",
+    "eslint": "^8.20.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.0.0",
+    "typescript": "^4.7.4",
+    "@vscode/test-electron": "^2.1.5"
+  }
+}
